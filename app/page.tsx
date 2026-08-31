@@ -13,7 +13,7 @@ import {
 } from "react";
 import Link from "next/link";
 import catalogMeta from "@/data/catalog-meta.json";
-import { emptyStats, formatShareResult, normalizeStats, summarizeStats, type StatsSummary, type StoredStats } from "@/lib/stats";
+import { emptyStats, formatShareResult, normalizeStats, recordCompletedRound, summarizeStats, type StatsSummary, type StoredStats } from "@/lib/stats";
 import type {
   ClueCategory,
   GameBootstrap,
@@ -226,18 +226,12 @@ function readStored(date: string): StoredRound {
 function writeStored(date: string, value: StoredRound) {
   try {
     window.localStorage.setItem(`tollyriddl:${date}`, JSON.stringify(value));
-    const current = normalizeStats(JSON.parse(window.localStorage.getItem("tollyriddl:stats") ?? "null"));
-    const playedDates = [...current.playedDates];
-    const wonDates = [...current.wonDates];
-    const guessCounts = { ...current.guessCounts };
-    if (!playedDates.includes(date)) playedDates.push(date);
-    if (value.solved) {
-      if (!wonDates.includes(date)) wonDates.push(date);
-      guessCounts[date] = value.guesses.length;
-    }
-    const bestGuesses = Object.values(guessCounts);
-    const best = bestGuesses.length ? Math.min(...bestGuesses) : current.best;
-    window.localStorage.setItem("tollyriddl:stats", JSON.stringify({ playedDates, wonDates, guessCounts, best }));
+    const stats = recordCompletedRound(readStoredStats(), date, {
+      complete: value.complete,
+      solved: value.solved,
+      guessCount: value.guesses.length,
+    });
+    window.localStorage.setItem("tollyriddl:stats", JSON.stringify(stats));
   } catch {
     // Storage is optional; the active round remains usable in memory.
   }

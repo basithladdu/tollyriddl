@@ -50,6 +50,37 @@ export function normalizeStats(value: unknown): StoredStats {
   };
 }
 
+export function recordCompletedRound(
+  stats: unknown,
+  date: string,
+  round: { complete: boolean; solved: boolean; guessCount: number },
+): StoredStats {
+  const current = normalizeStats(stats);
+  if (
+    !round.complete ||
+    !isDate(date) ||
+    !Number.isInteger(round.guessCount) ||
+    round.guessCount < 1 ||
+    round.guessCount > 10
+  ) {
+    return current;
+  }
+
+  const playedDates = current.playedDates.includes(date)
+    ? current.playedDates
+    : [...current.playedDates, date];
+  const wonDates = round.solved && !current.wonDates.includes(date)
+    ? [...current.wonDates, date]
+    : current.wonDates;
+  const guessCounts = round.solved
+    ? { ...current.guessCounts, [date]: round.guessCount }
+    : current.guessCounts;
+  const recordedWins = Object.values(guessCounts);
+  const best = recordedWins.length ? Math.min(...recordedWins) : current.best;
+
+  return normalizeStats({ playedDates, wonDates, guessCounts, best });
+}
+
 function streakEndingAt(wonDates: Set<string>, anchor: string): number {
   let streak = 0;
   let cursor = anchor;
